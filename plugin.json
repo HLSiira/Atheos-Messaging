@@ -1,0 +1,11 @@
+[{
+    "author" : "RustyGumbo",
+    "version": "2.0",
+    "name"   : "Messaging",
+    "url"    : "https://github.com/RustyGumbo/Codiad-Messaging.git",
+    "rightbar" : [{
+        "action" : "codiad.Messaging.create();",
+        "icon" : "icon-chat",
+        "title" : "Messaging"
+    }]
+}]
