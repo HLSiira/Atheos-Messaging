@@ -1,161 +1,157 @@
 <?php
 
-    /*
-    *  Copyright (c) Codiad & RustyGumbo, distributed
-    *  as-is and without warranty under the MIT License. See
-    *  [root]/license.txt for more. This information must remain intact.
-    */
-	    
-    require_once('file_db.php');
-    $dataBase = new file_db(BASE_PATH . '/data/messaging');
+//////////////////////////////////////////////////////////////////////////////80
+//  Atheos Messaging
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2020 Liam Siira (liam@siira.io), distributed as-is and without
+// warranty under the MIT License. See [root]/license.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2016 Codiad & RustyGumbo
+// Source: https://github.com/RustyGumbo/Codiad-Messaging
+//////////////////////////////////////////////////////////////////////////////80
 
-    class Message {
+require_once('file_db.php');
 
-        //////////////////////////////////////////////////////////////////
-        // PROPERTIES
-        //////////////////////////////////////////////////////////////////
+class Message {
 
-        public $sender		= '';
-        public $recipient	= '';
-        public $message         = '';
-        public $date            = '';
-        public $is_read		= 0;
+	//////////////////////////////////////////////////////////////////////////80
+	// PROPERTIES
+	//////////////////////////////////////////////////////////////////////////80
+	private $user = null;
+	private $database = null;
 
-        //////////////////////////////////////////////////////////////////
-        // Initialize Data Base
-        //////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////80
+	// Constructor
+	//////////////////////////////////////////////////////////////////////////80
+	public function __construct($user) {
+		$this->user = $user;
+		$this->database = new file_db(BASE_PATH . '/data');
+	}
 
-        function getDB() {
-            global $dataBase;
-            return $dataBase;
-        }
 
-        //////////////////////////////////////////////////////////////////
-        // METHODS
-        //////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////80
+	// Create a message.
+	//////////////////////////////////////////////////////////////////////////80
+	public function send($recipient = false, $text = false) {
+		if (!$recipient || !$text) {
+			Common::sendJSON("E403m");
+			die;
+		}
 
-        // -----------------------------||----------------------------- //
+		$date = date("Y-m-d H:i:s");
 
-        //////////////////////////////////////////////////////////////////
-        // Create a message.
-        //////////////////////////////////////////////////////////////////
-        
-        public function Create(){
-            //Set the message date.
-            $curDate = new DateTime();
-            $this->date = $curDate->format('Y-m-d H:i:s');
+		$query = array('sender' => $this->user, 'recipient' => $recipient, 'text' => $text, 'date' => $date, 'unread' => 1);
 
-            /* Array */ $query = array('sender' => $this->sender, 'recipient' => $this->recipient, 'message' => $this->message, 'date' => $this->date, 'is_read' => 0);
-            /* Array */ $results = $this->getDB()->create($query, 'message');
+		$results = $this->database->create($query, 'messaging');
 
-            return $results;
-        }
+		if ($results) {
+			Common::sendJSON("S2000");
+		} else {
+			Common::sendJSON("error", "Message could not be sent.");
+		}
+	}
 
-        //////////////////////////////////////////////////////////////////
-        // Check for new messages.
-        //////////////////////////////////////////////////////////////////
-        
-        public function CheckNew(){
-            /* Array */ $query = array('recipient' => $this->recipient, 'is_read' => 0, 'message' => "*", 'sender' => "*", 'date' => "*");
-            /* Array */ $results = $this->getDB()->select($query, 'message');
-            /* Array */ $senders = array();
-            /* Array */ $data = array();
+	//////////////////////////////////////////////////////////////////////////80
+	// Check for new messages.
+	//////////////////////////////////////////////////////////////////////////80
+	public function check() {
+		$query = array('recipient' => $this->user, 'unread' => 1, 'text' => "*", 'sender' => "*", 'date' => "*");
+		$results = $this->database->select($query, 'messaging');
+		$senders = array();
+		$data = array();
 
-            if ($results != null) {
-                foreach($results as $result) {
-                    $senders[$result->get_field('sender')]++;
-                }
+		if ($results !== null) {
+			foreach ($results as $result) {
+				$senders[$result->get_field('sender')]++;
+			}
+			//Prepare the return data.
+			$data['senders'] = $senders;
+		}
 
-                //Prepare the return data.
-                $data['senders'] = $senders;
-            }
-            
-            return $data;
-        }
+		Common::sendJSON("success", $data);
+	}
 
-        //////////////////////////////////////////////////////////////////
-        // Check for a new message.
-        //////////////////////////////////////////////////////////////////
-        
-        public function MarkAllRead(){
-            /* Array */ $query = array('recipient' => $this->recipient, 'is_read' => 0, 'message' => "*", 'sender' => $this->sender, 'date' => "*");
-            /* Array */ $results = $this->getDB()->select($query, 'message');
+	//////////////////////////////////////////////////////////////////////////80
+	// Check for a new message.
+	//////////////////////////////////////////////////////////////////////////80
+	public function markAllRead() {
+		$query = array('recipient' => $this->user, 'unread' => 1, 'text' => "*", 'sender' => $this->sender, 'date' => "*");
+		$results = $this->database->select($query, 'messaging');
 
-            foreach($results as $result) {
-                //Update the message.
-                /* Array */ $query = array(
-                    'sender'    => $result->get_field('sender'),
-                    'recipient' => $result->get_field('recipient'),
-                    'message'   => $result->get_field('message'),
-                    'date'      => $result->get_field('date'),
-                    'is_read'   => 1
-                 );
+		foreach ($results as $result) {
+			//Update the message.
+			$query = array(
+				'sender' => $result->get_field('sender'),
+				'recipient' => $result->get_field('recipient'),
+				'text' => $result->get_field('text'),
+				'date' => $result->get_field('date'),
+				'unread' => 0
+			);
 
-                //Workaround: file_db does not provide an update method, the entry must be deleted and re-inserted.
-                $result->remove();
-                $this->getDB()->create($query, 'message');
-            }
-        }
+			//Workaround: file_db does not provide an update method, the entry must be deleted and re-inserted.
+			$result->remove();
+			$this->database->create($query, 'text');
+		}
+	}
 
-        //////////////////////////////////////////////////////////////////
-        // Get the message history.
-        //////////////////////////////////////////////////////////////////
-        
-        public function GetHistory(){
-            /* Array */ $messages = array();
-            
-            //Get the received messages.
-            /* Array */ $query = array('recipient' => $this->recipient, 'is_read' => "*", 'message' => "*", 'sender' => $this->sender, 'date' => '*');
-            /* Array */ $results = $this->getDB()->select($query, 'message');
-            
-            foreach($results as $result) {
-                $messages[] = array(
-                    'sender'    => $result->get_field('sender'),
-                    'message'   => $result->get_field('message'),
-                    'date'      => $result->get_field('date'),
-                    'is_read'   => $result->get_field('is_read')
-                );
-            }
-            
-            //Get the sent messages.
-            /* Array */ $query = array('recipient' => $this->sender, 'is_read' => "*", 'message' => "*", 'sender' => $this->recipient, 'date' => '*');
-            /* Array */ $results = $this->getDB()->select($query, 'message');
-            
-            foreach($results as $result) {
-                $messages[] = array(
-                    'sender'    => $result->get_field('sender'),
-                    'message'   => $result->get_field('message'),
-                    'date'      => $result->get_field('date'),
-                    'is_read'   => $result->get_field('is_read')
-                );
-            }
-            
-            //Sort the messages.
-            foreach ($messages as $key => $row) {
-                $date[$key]  = $row['date'];
-            }
-            
-            array_multisort($date, SORT_ASC, $messages);
+	//////////////////////////////////////////////////////////////////////////80
+	// Get the message history.
+	//////////////////////////////////////////////////////////////////////////80
+	public function chatHistory($recipient) {
+		$messages = array();
 
-            //Prepare the return data.
-            return $messages;
-        }
+		//Get the received messages.
+		$query = array('recipient' => $recipient, 'unread' => "*", 'text' => "*", 'sender' => $this->user, 'date' => '*');
+		$results = $this->database->select($query, 'messaging');
 
-        //////////////////////////////////////////////////////////////////
-        // Get users other than the user in session.
-        //////////////////////////////////////////////////////////////////
-        public function GetOtherUsers(){
-            /* Array */ $users = getJSON('users.php');
+		foreach ($results as $result) {
+			$messages[] = array(
+				'sender' => $result->get_field('sender'),
+				'text' => $result->get_field('text'),
+				'date' => $result->get_field('date'),
+				'unread' => $result->get_field('unread')
+			);
+		}
 
-            //Remove the user in session.
-            foreach($users as $key => $user) {
-                if($user['username'] == $_SESSION['user']){
-                    //unset($users[$key]);
-                    break;
-                }
-            }
+		//Get the sent messages.
+		$query = array('recipient' => $this->user, 'unread' => "*", 'text' => "*", 'sender' => $recipient, 'date' => '*');
+		$results = $this->database->select($query, 'messaging');
 
-            return $users;
-        }
-    }
+		foreach ($results as $result) {
+			$messages[] = array(
+				'sender' => $result->get_field('sender'),
+				'text' => $result->get_field('text'),
+				'date' => $result->get_field('date'),
+				'unread' => $result->get_field('unread')
+			);
+		}
+
+		//Sort the messages.
+		foreach ($messages as $key => $row) {
+			$date[$key] = $row['date'];
+		}
+
+		array_multisort($date, SORT_ASC, $messages);
+
+		//Prepare the return data.
+		return $messages;
+	}
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Get users other than the user in session.
+	//////////////////////////////////////////////////////////////////////////80
+	public function listUsers() {
+		$users = Common::readJSON('users');
+		$temp = array();
+
+		//Remove the user in session.
+		foreach ($users as $username => $data) {
+			if ($username == $this->user) continue;
+			$temp[] = $username;
+		}
+
+		return $temp;
+	}
+}
 ?>

@@ -1,189 +1,179 @@
-/*
-*  Copyright (c) Codiad & RustyGumbo, distributed
-*  as-is and without warranty under the MIT License. See
-*  [root]/license.txt for more. This information must remain intact.
-*/
+//////////////////////////////////////////////////////////////////////////////80
+//  Atheos Messaging
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2020 Liam Siira (liam@siira.io), distributed as-is and without
+// warranty under the MIT License. See [root]/license.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2016 Codiad & RustyGumbo
+// Source: https://github.com/RustyGumbo/Codiad-Messaging
+//////////////////////////////////////////////////////////////////////////////80
 
-(function(global, $){
-    //Define core variables.
-    var codiad = global.codiad,
-        scripts = document.getElementsByTagName('script'),
-        path = scripts[scripts.length-1].src.split('?')[0],
-        curpath = path.split('/').slice(0, -1).join('/')+'/';
+//This is a test of the emergency system
 
-    //Instantiate the plugin.
-    $(function() {
-        $('head').append('<link rel="stylesheet" href="' + curpath + 'style.css" type="text/css" />');
-        codiad.Messaging.init();
-    });
+(function(global) {
 
-    //Declare the plugin properties and methods.
-    codiad.Messaging = {
-        //Controller path.
-        controller: curpath + 'controller.php',
-        
-        //Dialog path.
-        dialog: curpath + 'dialog.php',
-        
-        //Message poll interval
-        interval: 3000,
-        
-        //Initialization function.
-        init: function() {
-            var _this = this;
-            
-            //Add the messaging div.
-            var html = "<div id='messaging-bar'><ul></ul></div>";
-            $(html).insertBefore("#editor-bottom-bar");
+	var atheos = global.atheos,
+		amplify = global.amplify;
 
-            //Timer to check for messages.
-            setInterval(function() {
-                _this.checkNew();
-            }, _this.interval);
-        },
-        
-        //Show the form to create a new message.
-        create: function() {
-            var _this = this;
+	amplify.subscribe('system.loadExtra', () => atheos.Messaging.init());
 
-            //Show the modal form.
-            codiad.modal.load(300, this.dialog + '?action=create');
-            
-            //Hook the submit event.
-            $('#modal-content form').live('submit', function(e) {
-                e.preventDefault();
-                var /* Boolean */ is_valid = true;
-                var /* String */ recipient = $(this).find('select[name="lst_recipient"]').val();
-                var /* String */ message = $(this).find('input[name="txt_message"]').val();
-                
-                //Check for recipient selection.
-                if(recipient.trim().length === 0) {
-                    codiad.message.error("Error: A recipient must be selected.");
-                    is_valid = false;
-                }
-                
-                // Check for empty message.
-                if (message.trim().length === 0) {
-                    codiad.message.error("Error: Message can't be empty.");
-                    is_valid = false;
-                }
-                
-                if (is_valid) {
-                    //Send the message and close the modal form.
-                    _this.send(recipient, message);
-                    codiad.modal.unload();
-                }
-            });
-        },
-        
-        //Show the chat history.
-        history: function(sender) {
-            var _this = this;
+	var self = null;
 
-            //Show the modal form.
-            codiad.modal.load(500, this.dialog + '?action=history&sender=' + sender);
-            
-            //Hook the submit event.
-            $('#modal-content form').live('submit', function(e) {
-                e.preventDefault();
-                var /* Boolean */ is_valid = true;
-                var /* String */ recipient = $(this).find('input[name="hdn_recipient"]').val();
-                var /* String */ message = $(this).find('input[name="txt_message"]').val();
-                
-                //Check for recipient selection.
-                if(recipient.trim().length === 0) {
-                    codiad.message.error("Error: A recipient must be selected.");
-                    is_valid = false;
-                }
-                
-                // Check for empty message.
-                if (message.trim().length === 0) {
-                    codiad.message.error("Error: Message can't be empty.");
-                    is_valid = false;
-                }
-                
-                if (is_valid) {
-                    //Send the message and close the modal form.
-                    _this.send(recipient, message);
-                    codiad.modal.unload();
-                }
-            });
-        },
-        
-        //Get the count of users registered on the file.
-        send: function(recipient, message) {
-            var _this = this;
-            
-            $.get(
-                _this.controller + "?action=send&recipient=" + recipient + "&message=" + message,
-                function(data) {
-                    var /* Object */ responseData = codiad.jsend.parse(data);
+	atheos.Messaging = {
 
-                    //Empty response data means success.
-                    if(!responseData) {
-                        codiad.message.success("Your message has been sent.");
-                    }
-                }
-            );
-        },
+		path: atheos.path + 'plugins/Messaging/',
+		controller: this.path + 'controller.php',
+		dialog: this.path + 'dialog.php',
 
-        //Check for a new message.
-        checkNew: function() {
-            var _this = this;
+		bar: null,
 
-            $.get(
-                _this.controller + "?action=checknew",
-                function(data) {
-                    var /* Object */ responseData = codiad.jsend.parse(data);
+		//Initialization function.
+		init: function() {
+			self = this;
 
-                    if(responseData) {
-                        $.each(responseData.senders, function(sender, count) {
-                            var id = "messaging-" + sender;
+			//Add the messaging div.
+			var html = '<div id="messaging_bar"><ul class="tabList"></ul></div>';
+			oX(html).insertBefore("#editor-bottom-bar");
+			self.bar = oX('#messaging_bar');
 
-                            //Check if there is a tab already open.
-                            var chatTab = $("#" + id);
+			//Timer to check for messages.
+			amplify.subscribe('chrono.mega', self.checkNew);
+			self.checkNew();
 
-                            if(chatTab.length === 0) {
-                                //Display a new chat tab.
-                                var newLi = "<li id='" + id + "' class='tab-item changed'><a class='label'><span class='icon-chat'></span>" + sender + "<span class='count'> (" + count + ")</span></a><a class='close'>x</a></li>";
-                                $('#messaging-bar ul').append(newLi);
-                                chatTab = $("#" + id);
+			self.bar.on('click, auxclick', function(e) {
+				e.stopPropagation();
 
-                                //Add a click event to open the chat box.
-                                chatTab.find(".label").click(function() {
-                                    chatTab.removeClass("changed");
-                                    chatTab.find(".count").text("");
-                                    _this.history(sender);
-                                });
+				var tagName = e.target.tagName;
+				var node = oX(e.target);
 
-                                //Add a click event to close the tab.
-                                chatTab.find(".close").click(function() {
-                                    chatTab.remove();
-                                    _this.markAllRead(sender);
-                                });
-                            } else {
-                                chatTab.addClass("changed");
-                            }
-                        });
-                    }
-                }
-            );
-        },
+				if (tagName === 'UL') {
+					return;
+				}
+				if (['I', 'A', 'SPAN'].indexOf(tagName) > -1) {
+					node = node.parent('LI');
+				}
 
-        //Mark all messages as read.
-        markAllRead: function(sender) {
-            var _this = this;
 
-            $.get(
-                _this.controller + "?action=markallread&sender=" + sender,
-                function(data) {
-                    var /* Object */ responseData = codiad.jsend.parse(data);
+				//LeftClick = Open
+				if (e.which === 1 && tagName !== 'I') {
+					var sender = node.attr('data-sender');
+					self.openChat(sender);
 
-                    if(responseData) {
-                        //Messages have been marked as read.
-                    }
-                }
-            );
-        }
-    };
-})(this, jQuery);
+					//MiddleClick = Close
+				} else if (e.which === 2 || tagName === 'I') {
+					node.remove();
+				}
+			});
+		},
+
+		//Show the form to create a new message.
+		openNewDialog: function() {
+			atheos.modal.load(300, atheos.dialog, {
+				target: 'Messaging',
+				action: 'openNewDialog',
+				listener: self.create
+			});
+		},
+
+		//Show the chat history.
+		openChat: function(sender) {
+
+			// $('.messaging-history').scrollTop($('.messaging-history')[0].scrollHeight);
+
+
+
+			atheos.modal.load(300, atheos.dialog, {
+				target: 'Messaging',
+				action: 'openChat',
+				sender,
+				listener: self.create
+			});
+		},
+
+		//Get the count of users registered on the file.
+		create: function(e) {
+			e.preventDefault();
+			var is_valid = true;
+			var recipient = oX('#modal_content [name="recipient"]').value();
+			var text = oX('#modal_content input[name="text"]').value();
+
+			//Check for recipient selection.
+			if (recipient.trim().length === 0) {
+				atheos.toast.show('error', 'Error: A recipient must be selected.');
+				is_valid = false;
+			}
+
+			// Check for empty message.
+			if (text.trim().length === 0) {
+				atheos.toast.show('error', 'Error: Message can\'t be empty.');
+				is_valid = false;
+			}
+
+			if (is_valid) {
+				//Send the message and close the modal form.
+				self.send(recipient, text);
+				atheos.modal.unload();
+			}
+		},
+
+		send: function(recipient, text) {
+			echo({
+				url: atheos.controller,
+				data: {
+					target: 'Messaging',
+					action: 'send',
+					recipient,
+					text
+				},
+				success: function(reply) {
+					log(reply);
+				}
+			});
+		},
+
+		//Check for a new message.
+		checkNew: function() {
+
+			echo({
+				url: atheos.controller,
+				data: {
+					target: 'Messaging',
+					action: 'check'
+				},
+				success: function(reply) {
+					if (reply.status !== 'success') return;
+
+					for (var sender in reply.senders) {
+						var count = reply.senders[sender];
+
+						var tab = oX('#messaging_bar [data-sender="' + sender + '"]');
+
+						if (!tab) {
+
+							oX('#messaging_bar ul').append(`<li data-sender="${sender}" class="changed"><a>${sender}<span class="count"> (${count})</span><i class="fas fa-envelope"></i></a><i class="close fas fa-times-circle"></i></li>`);
+						} else {
+							tab.addClass('changed');
+						}
+
+					}
+				}
+			});
+		},
+
+		//Mark all messages as read.
+		markAllRead: function(sender) {
+
+			$.get(
+				self.controller + "?action=markallread&sender=" + sender,
+				function(data) {
+					var responseData = atheos.jsend.parse(data);
+
+					if (responseData) {
+						//Messages have been marked as read.
+					}
+				}
+			);
+		}
+	};
+})(this);

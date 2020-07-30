@@ -1,111 +1,112 @@
 <?php
-    
-    /*
-    *  Copyright (c) Codiad & RustyGumbo, distributed
-    *  as-is and without warranty under the MIT License. See
-    *  [root]/license.txt for more. This information must remain intact.
-    */
-    
-    require_once('../../common.php');
-    require_once('class.message.php');
 
-    /* Object */ $Message = new Message();
+//////////////////////////////////////////////////////////////////////////////80
+//  Atheos Messaging
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2020 Liam Siira (liam@siira.io), distributed as-is and without
+// warranty under the MIT License. See [root]/license.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2016 Codiad & RustyGumbo
+// Source: https://github.com/RustyGumbo/Codiad-Messaging
+//////////////////////////////////////////////////////////////////////////////80
 
-    //////////////////////////////////////////////////////////////////
-    // Verify Session or Key
-    //////////////////////////////////////////////////////////////////
-    
-    checkSession();
-?>
-<form>
-<?php
-    switch($_GET['action']){
-    
-        //////////////////////////////////////////////////////////////////
-        // Create
-        //////////////////////////////////////////////////////////////////
-        case 'create':
-            /* Array */ $users = $Message->GetOtherUsers();
-?>
-    <label>Recipient</label>
-    <select name="lst_recipient">
-        <option value="">Select a recipient...</option>
-        <?php foreach($users as $user): ?>
-        <option value="<?php echo $user['username']; ?>"><?php echo $user['username']; ?></option>
-        <?php endforeach; ?>
-    </select>
-    <input type="text" name="txt_message" autofocus="autofocus" autocomplete="off" placeholder="Write a message..." />
-    <button class="btn-left">Send</button>
-    <button class="btn-right" onclick="codiad.modal.unload(); return false;">Cancel</button>
-<?php
-            break;
-    
-        //////////////////////////////////////////////////////////////////
-        // History
-        //////////////////////////////////////////////////////////////////
-        case 'history':
-            //Get received messages.
-            $Message->sender = $_GET['sender'];
-            $Message->recipient = $_SESSION['user'];
-            /* Array */ $messages = $Message->GetHistory();
-            
-            //Mark all messages as read.
-            $Message->MarkAllRead();
-?>
-    <label>Chat with <?php echo $_GET['sender']; ?></label>
-    <div id="messaging-history-<?php echo $_GET['sender']; ?>" class="messaging-history">
-<?php
-            /* String */ $user = "";
-            /* String */ $date = ""; //Used to print the date on the last message.
-            
-            foreach($messages as $message) {
-                /* String */ $html_before = "";
-                
-                //Create a separator between user "bubbles".
-                if($message['sender'] != $user) {
-                    //Close the previous bubble.
-                    if($user !== "") {
-                        $html_before .= "</div>";
-                    }
-                    //Establish the new user.
-                    $user = $message['sender'];
-                    
-                    //Print the date at the end of all messages.
-                    if(isset($date)) {
-                        $html_before .= "<div class='messaging-date'>" . $date . "</div>";
-                    }
-                    
-                    //Open the bubble.
-                    if($message['is_read']) {
-                        $html_before .= "<div class='messaging-message'>";
-                    } else {
-                        $html_before .= "<div class='messaging-message new'>";
-                    }
-                    
-                    //Print the username.
-                    $html_before .=  "<div class='messaging-user'>" . $message['sender'] . "</div>";
-                }
-                
-                //Print the prefixed HTML.
-                echo $html_before;
-                
-                //Print the message.
-                echo $message['message'] . "<br />";
-                
-                //Set the date variable.
-                $date = $message['date'];
-            }
-            
-            echo "<div class='messaging-date'>" . $date . "</div></div>";
-?>
-    </div>
-    <input type="text" name="txt_message" autofocus="autofocus" autocomplete="off" placeholder="Write a message..." />
-    <input type="hidden" name="hdn_recipient" value="<?php echo $_GET['sender']; ?>" />
-    <button class="btn-left">Send</button>
-    <button class="btn-right" onclick="codiad.modal.unload(); return false;">Cancel</button>
-    <script>$('.messaging-history').scrollTop($('.messaging-history')[0].scrollHeight);</script>
-<?php
-            break;
-    }
+require_once('class.message.php');
+
+$user = Common::data("user", "session");
+$Message = new Message($user);
+
+switch ($action) {
+
+	//////////////////////////////////////////////////////////////////
+	// Create
+	//////////////////////////////////////////////////////////////////
+	case 'openNewDialog':
+		$users = $Message->listUsers();
+		$options = "";
+		foreach ($users as $username) {
+			$options .= "<option value=\"$username\">$username</option>\n";
+		}
+		?>
+		<label class="title"><i class="fas fa-envelope"></i>Send a new message</label>
+		<form>
+			<select name="recipient">
+				<option default noselect disabled value="">Select a recipient...</option>
+				<?php echo $options; ?>
+			</select>
+			<input type="text" name="text" autofocus="autofocus" autocomplete="off" placeholder="Write a message..." />
+			<button class="btn-left">Send</button>
+			<button class="btn-right" onclick="atheos.modal.unload(); return false;">Cancel</button>
+		</form>
+		<?php
+		break;
+
+	//////////////////////////////////////////////////////////////////
+	// History
+	//////////////////////////////////////////////////////////////////
+	case 'openChat':
+		//Get received messages.
+		$recipient = Common::data("sender");
+		$messages = $Message->chatHistory($recipient);
+
+		$user = "";
+		$date = "";
+
+		$chat = "";
+
+		$bubble = "";
+		$bubbleClass = "message";
+
+		foreach ($messages as $message) {
+			if ($message["text"] === "") continue;
+
+			// Set the initial sender
+			if ($user === "") {
+				$user = $message["sender"];
+			}
+
+			//Create a separator between user "bubbles".
+			if ($message["sender"] !== $user) {
+				$user = "<span class=\"user\">$user</span>";
+
+				$bubble = $user . $bubble;
+				$bubble .= $date;
+
+				$bubble = "<div class=\"$bubbleClass\">$bubble</div>";
+
+				$chat .= $bubble;
+				$bubble = "";
+				$user = $message["sender"];
+			}
+
+			$date = "<span class=\"date\">" . $message["date"] . "</span>";
+			$bubble .= "<span class=\"text\">" . $message["text"] . "</span>";
+
+			//Open the bubble.
+			if ($message['unread'] === "1") $bubbleClass = "message new";
+		}
+
+		$user = "<span class=\"user\">$user</span>";
+		$bubble = $user . $bubble;
+		$bubble .= $date;
+		$bubble = "<div class=\"$bubbleClass\">$bubble</div>";
+		$chat .= $bubble;
+
+		//Mark all messages as read.
+		$Message->markAllRead();
+		?>
+		<label class="title"><i class="fas fa-envelope"></i>Chat with <?php echo $recipient; ?></label>
+		<form>
+			<div id="messaging_history">
+				<?php echo $chat; ?>
+			</div>
+			<input type="hidden" name="recipient" value="<?php echo $recipient; ?>" />
+			<input type="text" name="text" autofocus="autofocus" autocomplete="off" placeholder="Write a message..." />
+			<button class="btn-left">Send</button>
+			<button class="btn-right" onclick="atheos.modal.unload(); return false;">Cancel</button>
+		</form>
+		<?php
+		break;
+}
 ?>
 </form>

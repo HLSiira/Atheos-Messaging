@@ -1,59 +1,53 @@
 <?php
 
-    /*
-    *  Copyright (c) Codiad & RustyGumbo, distributed
-    *  as-is and without warranty under the MIT License. See
-    *  [root]/license.txt for more. This information must remain intact.
-    */
+//////////////////////////////////////////////////////////////////////////////80
+//  Atheos Messaging
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2020 Liam Siira (liam@siira.io), distributed as-is and without
+// warranty under the MIT License. See [root]/license.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) 2016 Codiad & RustyGumbo
+// Source: https://github.com/RustyGumbo/Codiad-Messaging
+//////////////////////////////////////////////////////////////////////////////80
 
-    require_once('../../common.php');
-    require_once('class.message.php');
+require_once('class.message.php');
 
-    /* Object */ $Message = new Message();
+$user = Common::data("user", "session");
 
-    //////////////////////////////////////////////////////////////////
-    // Verify Session or Key
-    //////////////////////////////////////////////////////////////////
+$Message = new Message($user);
 
-    checkSession();
+switch ($action) {
 
-    //////////////////////////////////////////////////////////////////
-    // Send a message.
-    //////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////80
+	// Send a message.
+	//////////////////////////////////////////////////////////////////////////80
+	case 'send':
+		$recipient = Common::data("recipient");
+		$text = Common::data("text");
+		$Message->send($recipient, $text);
+		break;
 
-    if($_GET['action']=='send'){
-        $Message->sender = $_SESSION['user'];
-        $Message->recipient = $_GET['recipient'];
-        $Message->message = $_GET['message'];
-        $results = $Message->Create();
-        
-        if ($results != null) {
-            echo formatJSEND("success");
-        } else {
-            echo formatJSEND("error", "Error: Your message could not be sent.");
-        }
-    }
+	//////////////////////////////////////////////////////////////////////////80
+	// Check for a new message.
+	//////////////////////////////////////////////////////////////////////////80
+	case 'check':
+		$Message->check();
+		break;
 
-    //////////////////////////////////////////////////////////////////
-    // Check for a new message.
-    //////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////80
+	// Mark all messages as read.
+	//////////////////////////////////////////////////////////////////////////80
+	case 'markAllRead':
+		$Message->markAllRead();
+		Common::sendJSON("S2000");
+		break;
 
-    if($_GET['action']=='checknew'){
-        $Message->recipient = $_SESSION['user'];
-        $data = $Message->CheckNew();
-        
-        echo formatJSEND("success", $data);
-    }
-
-    //////////////////////////////////////////////////////////////////
-    // Mark all messages as read.
-    //////////////////////////////////////////////////////////////////
-
-    if($_GET['action']=='markallread'){
-        $Message->sender = $_GET['sender'];
-        $Message->recipient = $_SESSION['user'];
-        $Message->MarkAllRead();
-        
-        echo formatJSEND("success");
-    }
-?>
+	//////////////////////////////////////////////////////////////////////////80
+	// Default no action
+	//////////////////////////////////////////////////////////////////////////80
+	default:
+		Common::sendJSON("E401i");
+		die;
+		break;
+}

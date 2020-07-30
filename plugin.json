@@ -1,11 +1,14 @@
-[{
-    "author" : "RustyGumbo",
-    "version": "2.0",
-    "name"   : "Messaging",
-    "url"    : "https://github.com/RustyGumbo/Codiad-Messaging.git",
+{
+	"author": ["HLSiira", "RustyGumbo"],
+	"name": "Beautify",
+	"description": "Send messages between users within Atheos",
+	"category": "Collaboration",
+	"status": "available",
+	"url": "https://github.com/HLSiira/Atheos-Messaging",
+	"version": "2.0.0",
     "rightbar" : [{
-        "action" : "codiad.Messaging.create();",
-        "icon" : "icon-chat",
+        "action" : "atheos.Messaging.openNewDialog();",
+        "icon" : "fas fa-envelope",
         "title" : "Messaging"
     }]
-}]
+}
