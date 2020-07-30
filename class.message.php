@@ -63,7 +63,8 @@ class Message {
 
 		if ($results !== null) {
 			foreach ($results as $result) {
-				$senders[$result->get_field('sender')]++;
+				$sender = $result->get_field('sender');
+				$senders[$sender] = isset($senders[$sender]) ? $senders[$sender] + 1 : 1;
 			}
 			//Prepare the return data.
 			$data['senders'] = $senders;
