@@ -11,7 +11,7 @@
 // Source: https://github.com/RustyGumbo/Codiad-Messaging
 //////////////////////////////////////////////////////////////////////////////80
 
-require_once('file_db.php');
+require_once('class.database.php');
 
 class Message {
 
@@ -19,14 +19,14 @@ class Message {
 	// PROPERTIES
 	//////////////////////////////////////////////////////////////////////////80
 	private $user = null;
-	private $database = null;
+	private $db = null;
 
 	//////////////////////////////////////////////////////////////////////////80
 	// Constructor
 	//////////////////////////////////////////////////////////////////////////80
 	public function __construct($user) {
 		$this->user = $user;
-		$this->database = new file_db(BASE_PATH . '/data');
+		$this->db = new Scroll(BASE_PATH . '/data');
 	}
 
 
@@ -43,7 +43,7 @@ class Message {
 
 		$query = array('sender' => $this->user, 'recipient' => $recipient, 'text' => $text, 'date' => $date, 'unread' => 1);
 
-		$results = $this->database->create($query, 'messaging');
+		$results = $this->db->insert($query, 'messaging');
 
 		if ($results) {
 			Common::sendJSON("S2000");
@@ -56,15 +56,17 @@ class Message {
 	// Check for new messages.
 	//////////////////////////////////////////////////////////////////////////80
 	public function check() {
-		$query = array('recipient' => $this->user, 'unread' => 1, 'text' => "*", 'sender' => "*", 'date' => "*");
-		$results = $this->database->select($query, 'messaging');
+		$query = array('recipient' => $this->user, 'unread' => "*", 'text' => "*", 'sender' => "*", 'date' => "*");
+		$results = $this->db->select($query, 'messaging');
 		$senders = array();
 		$data = array();
+		
 
 		if ($results !== null) {
 			foreach ($results as $result) {
 				$sender = $result->get_field('sender');
-				$senders[$sender] = isset($senders[$sender]) ? $senders[$sender] + 1 : 1;
+				$unread = $result->get_field('unread');
+				$senders[$sender] = isset($senders[$sender]) ? $senders[$sender] + $unread : 0;
 			}
 			//Prepare the return data.
 			$data['senders'] = $senders;
@@ -76,9 +78,9 @@ class Message {
 	//////////////////////////////////////////////////////////////////////////80
 	// Check for a new message.
 	//////////////////////////////////////////////////////////////////////////80
-	public function markAllRead() {
-		$query = array('recipient' => $this->user, 'unread' => 1, 'text' => "*", 'sender' => $this->sender, 'date' => "*");
-		$results = $this->database->select($query, 'messaging');
+	public function markAllRead($sender) {
+		$query = array('recipient' => $this->user, 'unread' => 1, 'text' => "*", 'sender' => $sender, 'date' => "*");
+		$results = $this->db->select($query, 'messaging');
 
 		foreach ($results as $result) {
 			//Update the message.
@@ -92,7 +94,7 @@ class Message {
 
 			//Workaround: file_db does not provide an update method, the entry must be deleted and re-inserted.
 			$result->remove();
-			$this->database->create($query, 'text');
+			$this->db->insert($query, 'messaging');
 		}
 	}
 
@@ -104,7 +106,7 @@ class Message {
 
 		//Get the received messages.
 		$query = array('recipient' => $recipient, 'unread' => "*", 'text' => "*", 'sender' => $this->user, 'date' => '*');
-		$results = $this->database->select($query, 'messaging');
+		$results = $this->db->select($query, 'messaging');
 
 		foreach ($results as $result) {
 			$messages[] = array(
@@ -117,7 +119,7 @@ class Message {
 
 		//Get the sent messages.
 		$query = array('recipient' => $this->user, 'unread' => "*", 'text' => "*", 'sender' => $recipient, 'date' => '*');
-		$results = $this->database->select($query, 'messaging');
+		$results = $this->db->select($query, 'messaging');
 
 		foreach ($results as $result) {
 			$messages[] = array(

@@ -28,7 +28,7 @@
 #messaging_history {
 	height: 250px;
 	overflow: auto;
-	background: var(--background);
+	background: var(--ebony, #1C1C1E);
 	/*box-shadow: inset 0px 0px 5px 0px rgba(0, 0, 0, .5);*/
 }
 
@@ -57,7 +57,12 @@
 	font-weight: bold;
 }
 
-#messaging_history .new {
+#messaging_history .green {
 	border-left: 3px var(--green) solid;
+	padding-left: 2px;
+}
+
+#messaging_history .blue {
+	border-left: 3px var(--blue) solid;
 	padding-left: 2px;
 }

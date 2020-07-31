@@ -78,16 +78,16 @@
 
 		//Show the chat history.
 		openChat: function(sender) {
-
-			// $('.messaging-history').scrollTop($('.messaging-history')[0].scrollHeight);
-
-
-
 			atheos.modal.load(300, atheos.dialog, {
 				target: 'Messaging',
 				action: 'openChat',
 				sender,
-				listener: self.create
+				listener: self.create,
+				callback: function() {
+					var element = oX('#messaging_history').el;
+					element.scrollTop = element.scrollHeight - element.clientHeight;
+					atheos.common.hideOverlay();
+				}
 			});
 		},
 
@@ -113,7 +113,13 @@
 			if (is_valid) {
 				//Send the message and close the modal form.
 				self.send(recipient, text);
-				atheos.modal.unload();
+				if (oX('#messaging_history')) {
+					setTimeout(function() {
+						self.openChat(recipient);
+					}, 250);
+				} else {
+					atheos.modal.unload();
+				}
 			}
 		},
 
@@ -134,7 +140,6 @@
 
 		//Check for a new message.
 		checkNew: function() {
-
 			echo({
 				url: atheos.controller,
 				data: {
@@ -150,12 +155,20 @@
 						var tab = oX('#messaging_bar [data-sender="' + sender + '"]');
 
 						if (!tab) {
-
-							oX('#messaging_bar ul').append(`<li data-sender="${sender}" class="changed"><a>${sender}<span class="count"> (${count})</span><i class="fas fa-envelope"></i></a><i class="close fas fa-times-circle"></i></li>`);
-						} else {
-							tab.addClass('changed');
+							oX('#messaging_bar ul').append(`<li data-sender="${sender}"><a>${sender}<span class="count"></span><i class="fas fa-envelope"></i></a><i class="close fas fa-times-circle"></i></li>`);
 						}
+						tab = oX('#messaging_bar [data-sender="' + sender + '"]');
+						if (count > 0) {
+							tab.addClass('changed');
+							tab.find('.count').html(` (${count})`);
 
+							if (oX('#messaging_history') && oX('input[name="recipient"]').value() === sender) {
+								self.openChat(sender);
+							}
+						} else {
+							tab.removeClass('changed');
+							tab.find('.count').html(``);
+						}
 					}
 				}
 			});

@@ -13,8 +13,8 @@
 
 require_once('class.message.php');
 
-$user = Common::data("user", "session");
-$Message = new Message($user);
+$activeUser = Common::data("user", "session");
+$Message = new Message($activeUser);
 
 switch ($action) {
 
@@ -55,7 +55,7 @@ switch ($action) {
 		$chat = "";
 
 		$bubble = "";
-		$bubbleClass = "message";
+		$unread = false;
 
 		foreach ($messages as $message) {
 			if ($message["text"] === "") continue;
@@ -67,33 +67,54 @@ switch ($action) {
 
 			//Create a separator between user "bubbles".
 			if ($message["sender"] !== $user) {
+				$class = "message";
+				if ($unread) {
+					if ($user === $activeUser) {
+						$class .= " blue";
+					} else {
+						$class .= " green";
+					}
+				}
+
 				$user = "<span class=\"user\">$user</span>";
 
 				$bubble = $user . $bubble;
 				$bubble .= $date;
 
-				$bubble = "<div class=\"$bubbleClass\">$bubble</div>";
+
+
+				$bubble = "<div class=\"$class\">$bubble</div>";
 
 				$chat .= $bubble;
 				$bubble = "";
 				$user = $message["sender"];
+				$unread = false;
 			}
 
 			$date = "<span class=\"date\">" . $message["date"] . "</span>";
 			$bubble .= "<span class=\"text\">" . $message["text"] . "</span>";
 
 			//Open the bubble.
-			if ($message['unread'] === "1") $bubbleClass = "message new";
+			if ($message['unread'] === "1") $unread = true;
+		}
+
+		$class = "message";
+		if ($unread) {
+			if ($user === $activeUser) {
+				$class .= " blue";
+			} else {
+				$class .= " green";
+			}
 		}
 
 		$user = "<span class=\"user\">$user</span>";
 		$bubble = $user . $bubble;
 		$bubble .= $date;
-		$bubble = "<div class=\"$bubbleClass\">$bubble</div>";
+		$bubble = "<div class=\"$class\">$bubble</div>";
 		$chat .= $bubble;
 
 		//Mark all messages as read.
-		$Message->markAllRead();
+		$Message->markAllRead($recipient);
 		?>
 		<label class="title"><i class="fas fa-envelope"></i>Chat with <?php echo $recipient; ?></label>
 		<form>

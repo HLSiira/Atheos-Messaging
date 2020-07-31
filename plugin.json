@@ -9,6 +9,6 @@
     "rightbar" : [{
         "action" : "atheos.Messaging.openNewDialog();",
         "icon" : "fas fa-envelope",
-        "title" : "Messaging"
+        "title" : "Send new message"
     }]
 }
