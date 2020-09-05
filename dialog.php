@@ -13,7 +13,7 @@
 
 require_once('class.message.php');
 
-$activeUser = Common::data("user", "session");
+$activeUser = SESSION("user");
 $Message = new Message($activeUser);
 
 switch ($action) {
@@ -46,7 +46,7 @@ switch ($action) {
 	//////////////////////////////////////////////////////////////////
 	case 'openChat':
 		//Get received messages.
-		$recipient = Common::data("sender");
+		$recipient = POST("sender");
 		$messages = $Message->chatHistory($recipient);
 
 		$user = "";

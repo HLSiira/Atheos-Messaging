@@ -13,7 +13,7 @@
 
 require_once('class.message.php');
 
-$user = Common::data("user", "session");
+$user = SESSION("user");
 
 $Message = new Message($user);
 
@@ -23,8 +23,8 @@ switch ($action) {
 	// Send a message.
 	//////////////////////////////////////////////////////////////////////////80
 	case 'send':
-		$recipient = Common::data("recipient");
-		$text = Common::data("text");
+		$recipient = POST("recipient");
+		$text = POST("text");
 		$Message->send($recipient, $text);
 		break;
 

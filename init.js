@@ -69,7 +69,7 @@
 
 		//Show the form to create a new message.
 		openNewDialog: function() {
-			atheos.modal.load(300, atheos.dialog, {
+			atheos.modal.load(300, {
 				target: 'Messaging',
 				action: 'openNewDialog',
 				listener: self.create
@@ -78,7 +78,7 @@
 
 		//Show the chat history.
 		openChat: function(sender) {
-			atheos.modal.load(300, atheos.dialog, {
+			atheos.modal.load(300, {
 				target: 'Messaging',
 				action: 'openChat',
 				sender,
