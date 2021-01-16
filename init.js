@@ -14,9 +14,9 @@
 (function(global) {
 
 	var atheos = global.atheos,
-		amplify = global.amplify;
+		carbon = global.carbon;
 
-	amplify.subscribe('system.loadExtra', () => atheos.Messaging.init());
+	carbon.subscribe('system.loadExtra', () => atheos.Messaging.init());
 
 	var self = null;
 
@@ -38,7 +38,7 @@
 			self.bar = oX('#messaging_bar');
 
 			//Timer to check for messages.
-			amplify.subscribe('chrono.mega', self.checkNew);
+			carbon.subscribe('chrono.mega', self.checkNew);
 			self.checkNew();
 
 			self.bar.on('click, auxclick', function(e) {
