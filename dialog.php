@@ -114,7 +114,7 @@ switch ($action) {
 		$chat .= $bubble;
 
 		//Mark all messages as read.
-		$Message->markAllRead($recipient);
+		$Message->markAllRead($recipient, true);
 		?>
 		<label class="title"><i class="fas fa-envelope"></i>Chat with <?php echo $recipient; ?></label>
 		<form>

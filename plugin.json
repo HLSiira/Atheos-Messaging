@@ -1,14 +1,14 @@
 {
 	"author": ["HLSiira", "RustyGumbo"],
-	"name": "Beautify",
+	"name": "Messaging",
 	"description": "Send messages between users within Atheos",
 	"category": "Collaboration",
 	"status": "available",
 	"url": "https://github.com/HLSiira/Atheos-Messaging",
-	"version": "2.0.1",
+	"version": "2.1.0",
     "rightbar" : [{
         "action" : "atheos.Messaging.openNewDialog();",
         "icon" : "fas fa-envelope",
-        "title" : "Send new message"
+        "title" : "Send message"
     }]
 }

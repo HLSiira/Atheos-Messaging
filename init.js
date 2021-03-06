@@ -9,27 +9,19 @@
 // Source: https://github.com/RustyGumbo/Codiad-Messaging
 //////////////////////////////////////////////////////////////////////////////80
 
-//This is a test of the emergency system
-
-(function(global) {
-
-	var atheos = global.atheos,
-		carbon = global.carbon;
+(function() {
 
 	carbon.subscribe('system.loadExtra', () => atheos.Messaging.init());
 
-	var self = null;
+	var self = false;
 
 	atheos.Messaging = {
-
-		path: atheos.path + 'plugins/Messaging/',
-		controller: this.path + 'controller.php',
-		dialog: this.path + 'dialog.php',
 
 		bar: null,
 
 		//Initialization function.
 		init: function() {
+			if (self) return;
 			self = this;
 
 			//Add the messaging div.
@@ -38,8 +30,7 @@
 			self.bar = oX('#messaging_bar');
 
 			//Timer to check for messages.
-			carbon.subscribe('chrono.mega', self.checkNew);
-			self.checkNew();
+			carbon.subscribe('chrono.mega', self.check);
 
 			self.bar.on('click, auxclick', function(e) {
 				e.stopPropagation();
@@ -55,13 +46,13 @@
 				}
 
 
-				//LeftClick = Open
 				if (e.which === 1 && tagName !== 'I') {
+					//LeftClick = Open
 					var sender = node.attr('data-sender');
 					self.openChat(sender);
 
-					//MiddleClick = Close
 				} else if (e.which === 2 || tagName === 'I') {
+					//MiddleClick = Close
 					node.remove();
 				}
 			});
@@ -139,25 +130,21 @@
 		},
 
 		//Check for a new message.
-		checkNew: function() {
+		check: function() {
 			echo({
 				url: atheos.controller,
 				data: {
 					target: 'Messaging',
 					action: 'check'
 				},
-				success: function(reply) {
-					if (reply.status !== 'success') return;
+				settled: function(status, reply) {
+					if (status !== 'success') return;
 
-					for (var sender in reply.senders) {
-						var count = reply.senders[sender];
+					for (var sender in reply) {
+						var count = reply[sender];
 
-						var tab = oX('#messaging_bar [data-sender="' + sender + '"]');
+						var tab = self.getTab(sender);
 
-						if (!tab) {
-							oX('#messaging_bar ul').append(`<li data-sender="${sender}"><a>${sender}<span class="count"></span><i class="fas fa-envelope"></i></a><i class="close fas fa-times-circle"></i></li>`);
-						}
-						tab = oX('#messaging_bar [data-sender="' + sender + '"]');
 						if (count > 0) {
 							tab.addClass('changed');
 							tab.find('.count').html(` (${count})`);
@@ -174,19 +161,19 @@
 			});
 		},
 
+		getTab: function(sender) {
+			let tab = oX('#messaging_bar [data-sender="' + sender + '"]');
+
+			if (!tab) {
+				tab = oX(`<li data-sender="${sender}"><a>${sender}<span class="count"></span><i class="fas fa-envelope"></i></a><i class="close fas fa-times-circle"></i></li>`);
+
+				oX('#messaging_bar ul').append(tab);
+			}
+			return tab;
+		},
+
 		//Mark all messages as read.
 		markAllRead: function(sender) {
-
-			$.get(
-				self.controller + "?action=markallread&sender=" + sender,
-				function(data) {
-					var responseData = atheos.jsend.parse(data);
-
-					if (responseData) {
-						//Messages have been marked as read.
-					}
-				}
-			);
 		}
 	};
-})(this);
+})();

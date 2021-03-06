@@ -22,13 +22,13 @@
 
 #messaging_bar ul a {
 	width: auto;
-	color: var(--fcMajor);
+	color: var(--fontColorMajor);
 }
 
 #messaging_history {
 	height: 250px;
 	overflow: auto;
-	background: var(--ebony, #1C1C1E);
+	background: var(--shade7, #1C1C1E);
 	/*box-shadow: inset 0px 0px 5px 0px rgba(0, 0, 0, .5);*/
 }
 
